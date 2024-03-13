@@ -1,0 +1,39 @@
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+
+'This code was created by FEQ for Marchant Schmidt, Inc.
+'This code will run from the part xref maintenance. it will do a check upon the save to make sure the manufacturers part entered does not already exist.
+'If the part exists, it will exit the saving process and notify the user.
+'Inventory Master > File > Inventory Parts > New/Open > Select part and click Xref button.
+
+F.Intrinsic.Control.Try
+V.Local.sError.Declare(String)
+V.Local.sSql.Declare(String, "")
+V.Local.sRet.Declare(String, "")
+
+F.Intrinsic.Control.SelectCase(V.Caller.Hook)
+F.Intrinsic.Control.Case(13130)
+	'Post Save hook in the Part XRef maint.
+	F.ODBC.Connection!Conx.OpenCompanyConnection
+	'Passed.000008 variable is the manufacturer' part, which is what we are checking
+	F.Intrinsic.Control.If(V.Passed.000008.Trim, <>, "")
+		F.Intrinsic.String.Build("Select PART from V_PART_XREF_USER where MFG_PART = '{0}'", V.Passed.000008, V.Local.sSql)
+		F.ODBC.Connection!Conx.ExecuteAndReturn(V.Local.sSql, V.Local.sRet)
+		'If the manufacturer's part is found we give them an error and set the flag to not save.
+		F.Intrinsic.Control.If(V.Local.sRet.Trim, <>, "")
+			F.Intrinsic.String.Build("Manufacturer's Part already in use. {0}{0}Ending process.", V.Ambient.NewLine, V.Local.sRet)
+			F.Intrinsic.UI.Msgbox(V.Local.sRet, "DUPLICATE ERROR")
+			V.Passed.777777.Set(1)
+		F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.EndSelect
+
+Function.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Concat("Project: GCG_4586_Machine_Dash.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End
+Function.Intrinsic.Control.EndTry
+Program.Sub.Main.End
